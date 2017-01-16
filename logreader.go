@@ -21,6 +21,10 @@ func LogUpdateDb(command string, filename string) {
 		tx := db.MustBegin()
 		tx.MustExec("INSERT INTO log (command, filename) VALUES ($1, $2)", command, filename)
 		tx.Commit()
+	} else {
+		tx := db.MustBegin()
+		tx.MustExec("UPDATE log SET popularity=popularity+1 WHERE command=$1", command)
+		tx.Commit()
 	}
 }
 
