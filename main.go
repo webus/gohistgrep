@@ -15,6 +15,7 @@ import (
 
 var db *sqlx.DB
 const DbName = "gohistgrep.db"
+const DbJournalName = "gohistgrep.db-journal"
 
 
 func InitDB(filepath string) *sqlx.DB {
@@ -66,6 +67,9 @@ func getAllFiles() {
 			if filename == DbName {
 				continue
 			}
+			if filename == DbJournalName {
+				continue
+			}
 			month := sdata[len(sdata) - 2]
 			year := sdata[len(sdata) - 3]
 			sfilename := strings.Split(filename, ".")
@@ -84,6 +88,8 @@ func getAllFiles() {
 func main() {
 	db = InitDB("")
 	db.MustExec(Schema)
+	db.MustExec("PRAGMA synchronous=OFF")
+	db.MustExec("PRAGMA journal_mode=MEMORY")
 	if len(os.Args) == 2 {
 		SearchCommand(os.Args[1])
 	} else {
