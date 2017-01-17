@@ -22,6 +22,8 @@ CREATE TABLE IF NOT EXISTS log (
 );
 
 CREATE INDEX IF NOT EXISTS log_command ON log(command);
+CREATE INDEX IF NOT EXISTS log_popularity ON log(popularity);
+CREATE INDEX IF NOT EXISTS log_cp ON log(command,popularity);
 `
 
 type File struct {

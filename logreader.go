@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"strconv"
 	"time"
 	"bufio"
 	"strings"
@@ -9,26 +10,22 @@ import (
 )
 
 func LogUpdateDb(command string, filename string) {
-	logs := []Log{}
 	if strings.Contains(command, "gohistgrep ") {
 		return
 	}
-	err := db.Select(&logs, "SELECT * FROM log WHERE command=$1", command)
+	var count int
+	err := db.Get(&count, "SELECT COUNT(*) FROM log WHERE command=$1", command)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if len(logs) == 0 {
-		tx := db.MustBegin()
-		tx.MustExec("INSERT INTO log (command, filename) VALUES ($1, $2)", command, filename)
-		tx.Commit()
+	if count == 0 {
+		db.MustExec("INSERT INTO log (command, filename) VALUES ($1, $2)", command, filename)
 	} else {
-		tx := db.MustBegin()
-		tx.MustExec("UPDATE log SET popularity=popularity+1 WHERE command=$1", command)
-		tx.Commit()
+		db.MustExec("UPDATE log SET popularity=popularity+1 WHERE command=$1", command)
 	}
 }
 
-func LogUpdate(filename string) {
+func LogUpdate(filename string) int {
 	file, err := os.Open(filename)
 	if err != nil {
 		log.Fatal(err)
@@ -42,7 +39,9 @@ func LogUpdate(filename string) {
 	for _, line := range lines {
 		LogUpdateDb(line, filename)
 	}
+	return len(lines)
 }
+
 
 func ParseFiles() {
 	files := []File{}
@@ -53,10 +52,8 @@ func ParseFiles() {
 
 	for _, file := range files {
 		log.Info("Processing file " + file.Filename)
-		LogUpdate(file.Filename)
-		tx := db.MustBegin()
-		tx.MustExec("UPDATE files SET process_date=$1 WHERE filename=$2", time.Now(), file.Filename)
-		tx.Commit()
-		log.Info("Processing file done")
+		linesCount := LogUpdate(file.Filename)
+		db.MustExec("UPDATE files SET process_date=$1 WHERE filename=$2", time.Now(), file.Filename)
+		log.Info("Processed " + strconv.Itoa(linesCount) + " lines")
 	}
 }
