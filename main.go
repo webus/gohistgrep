@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"time"
+	"strconv"
 	"strings"
 	"path"
 	"path/filepath"
@@ -90,8 +91,15 @@ func main() {
 	db.MustExec(Schema)
 	db.MustExec("PRAGMA synchronous=OFF")
 	db.MustExec("PRAGMA journal_mode=MEMORY")
-	if len(os.Args) == 2 {
+	lenArgs := len(os.Args)
+	if lenArgs == 2 {
 		SearchCommand(os.Args[1])
+	} else if lenArgs == 3 {
+		limit, err := strconv.Atoi(os.Args[2])
+		if err != nil {
+			log.Fatal(err)
+		}
+		SearchCommandLong(os.Args[1], limit)
 	} else {
 		getAllFiles()
 		ParseFiles()
