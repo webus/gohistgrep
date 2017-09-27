@@ -27,7 +27,7 @@ func InitDB(filepath string) *sqlx.DB {
 	return db
 }
 
-func FilesUpdate(filename string, filedate time.Time) {
+func FilesUpdate(filename string, filedate time.Time) bool {
 	files := []File{}
 	err := db.Select(&files, "SELECT * FROM files WHERE filename=$1", filename)
 	if err != nil {
@@ -37,13 +37,17 @@ func FilesUpdate(filename string, filedate time.Time) {
 		tx := db.MustBegin()
 		tx.MustExec("INSERT INTO files (filename, date) VALUES ($1, $2)", filename, filedate)
 		tx.Commit()
-		log.Info("File added")
+		// log.Info("File added")
+		return true
 	} else {
-		log.Info("File skiped")
+		// log.Info("File skiped")
+		return false
 	}
 }
 
 func getAllFiles() {
+	skippedFiles := 0
+	addedFiles := 0
 	searchDir := path.Join(os.Getenv("HOME"), ".history")
 	fileList := []string{}
 	err := filepath.Walk(searchDir, func(path string, f os.FileInfo, err error) error {
@@ -60,8 +64,6 @@ func getAllFiles() {
 			log.Fatal(err)
 		}
 		if !fi.IsDir() {
-			log.Info("Found file " + file)
-
 			// FIXME:
 			sdata := strings.Split(file, "/")
 			filename := sdata[len(sdata) - 1]
@@ -81,9 +83,16 @@ func getAllFiles() {
 			layout:= "02-01-2006 15:04:05 MST"
 			real := day + "-" + month + "-" + year + " " + hour + ":" + minute + ":" + second + " MSK"
 			t, _ := time.Parse(layout, real)
-			FilesUpdate(file, t)
+			if FilesUpdate(file, t) == true {
+				log.Info("Found new file " + file)
+				addedFiles++
+			} else {
+				skippedFiles++
+			}
 		}
 	}
+	log.Info("Skipped files " + strconv.Itoa(skippedFiles))
+	log.Info("Added files " + strconv.Itoa(addedFiles))
 }
 
 func main() {
